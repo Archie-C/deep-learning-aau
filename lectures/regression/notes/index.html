@@ -878,26 +878,6 @@
     </div>
     In general, the aim is balance the bias and variance to find a model that fits the data well but also generalises to unseen data.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   </article>
 
 </div>
@@ -936,17 +916,29 @@
   const mobileToc = document.getElementById("mobile-toc");
 
   if (mobileToc) {
-    document.addEventListener("click", event => {
-      if (mobileToc.open && !mobileToc.contains(event.target)) {
-        mobileToc.open = false;
-      }
-    });
+    const closeMobileToc = () => {
+      mobileToc.open = false;
+    };
 
-    document.addEventListener("touchstart", event => {
-      if (mobileToc.open && !mobileToc.contains(event.target)) {
-        mobileToc.open = false;
+    const clickedInsideMobileToc = event => {
+      if (typeof event.composedPath === "function") {
+        return event.composedPath().includes(mobileToc);
       }
-    }, { passive: true });
+
+      return mobileToc.contains(event.target);
+    };
+
+    document.addEventListener("pointerdown", event => {
+      if (mobileToc.open && !clickedInsideMobileToc(event)) {
+        closeMobileToc();
+      }
+    }, true);
+
+    mobileToc.querySelectorAll("a").forEach(link => {
+      link.addEventListener("click", () => {
+        closeMobileToc();
+      });
+    });
   }
 </script>
 <script src="./chart.js"></script>

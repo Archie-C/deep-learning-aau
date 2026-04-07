@@ -165,13 +165,6 @@
     margin: 1rem 0;
     }
 
-    pre::before {
-        content: "Code";
-        display: block;
-        font-size: 0.75rem;
-        color: var(--muted);
-        margin-bottom: 8px;
-    }
 
     /* Code text */
     code {
@@ -336,6 +329,7 @@
       <a href="#dataset">Dataset</a>
       <a href="#1d-linear-regression">1D Linear Regression</a>
       <a href="#n-d-linear-regression">N-D Linear Regression</a>
+      <a href="#adding-basis-functions">Adding Basis Functions</a>
     </nav>
   </details>
 </div>
@@ -350,6 +344,7 @@
     <a href="#dataset">Dataset</a>
     <a href="#1d-linear-regression">1D Linear Regression</a>
     <a href="#n-d-linear-regression">N-D Linear Regression</a>
+    <a href="#adding-basis-functions">Adding Basis Functions</a>
   </nav>
 
   <!-- Main Content -->
@@ -644,19 +639,31 @@
     From these, we can see that the average number of bedrooms is the most important feature, having the largest absolute value.
     We can also see that the it has a positive relationship with the target. Which makes sense, you would expect that the more bedrooms a house has, the more expernsive it is.
   </p>
-  <h2 id="Adding basis functions">Adding Basis Functions</h2>
+  <h2 id="adding-basis-functions">Adding Basis Functions</h2>
   <p>
     One of the limitations of linear regression is that is can only capture linear relationships between the features and target variable.
     However, in reality, the relationship between quantities is often not linear.
     One way to extend the model is to add basis functions. However, we will need a more suitable dataset for this.
   </p>
   <p>
-    Add to the top of your file this import:
+    The best way to show this is to use a dataset with only one feature, so we can easily visualise the relationship. Additionally if we use a synthetic
+    dataset, we can control the relationship exactly, and make it non-linear. For this, we can use the following code:
   </p>
-  <pre><code class="language-python">  from sklearn.datasets import fetch_openml</code></pre>
-
+  <pre><code class="language-python">  X = np.linspace(-1, 1, 2000)
+  y = 0.5 * np.sin(10 * X) + 2 * X ** 3 - X ** 2 + 0.2 * np.random.randn(2000)
+  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+  </code></pre>
   <p>
-    There are many different types of basis functions, perhaps the most simple being polynomial. Lets go ahead and add one to our model and see how it performs vs the simple linear model. We will start with a quadratic without interaction terms, which means we will add the square of each feature as new columns to our design matrix. We can however, design the class such that we can use any degree of polynomial we want. Let's start with intialising the class:
+    Which will give a dataset that looks something like this:
+  </p>
+  <div class="chart-wrap">
+    <canvas id="non-linear-data"></canvas>
+  </div>
+  <h4>Polynomial Basis Function</h4>
+  <p>
+    There are many different types of basis functions, perhaps the most simple being polynomial. Lets go ahead and add one to our regression model and see how it performs vs the simple linear model. 
+    We will start with a quadratic without interaction terms, which means we will add the square of each feature as new columns to our design matrix. 
+    We can however, design the class such that we can use any degree of polynomial we want. Let's start with intialising the class:
   </p>
   <pre><code class="language-python">  class PolynomialRegression:
       def __init__(self, degree):
@@ -712,6 +719,57 @@
     def predict(self, X):
         design_matrix = self._design_matrix(X)
         return design_matrix @ self.theta</code></pre>
+    <p>
+      We can then create an instance of the model and fit it to the synthetic dataset we created earlier. 
+      Given that the generating function for the data is cubic with a sinusiodal component, we would expect that we could get a reasonable fit for the data. 
+    </p>
+    <pre><code class="language-python">  model = PolynomialRegression(degree=3)
+  model.fit(X_train.reshape(-1, 1), y_train)
+  predictions = model.predict(X_test.reshape(-1, 1))
+  score = np.mean((predictions - y_test) ** 2)
+  print(f"Mean Squared Error: {score}")</code></pre>
+  <code>Mean Squared Error: 0.15510426445874098</code>
+  <p>
+    Now a mean sqaured error of 0.155 is quite hard to interpret on its own, but we can compare it to the mean squared error of the linear regression model by using <code>degree=1</code> when we create the instance:
+  </p>
+  <pre><code class="language-python">  model = PolynomialRegression(degree=1)
+  model.fit(X_train.reshape(-1, 1), y_train)
+  predictions = model.predict(X_test.reshape(-1, 1))
+  score = np.mean((predictions - y_test) ** 2)
+  print(f"Mean Squared Error: {score}")</code></pre>
+  <code>Mean Squared Error: 0.37886078479083424</code>
+  <p>
+    We can see that the cubic basis function gives a whopping 59% improvement in the mean squared error compared to the linear model.
+    Lets also visualise these predictions to see how well it is fitting the data. We can do this by plotting the true values and the true curve vs the functions given by the learned basis functions:
+  </p>
+  <div class="chart-wrap">
+    <canvas id="linear-vs-cubic"></canvas>
+    </div>
+      <p>
+    As we can see the linear function captures the general increasing trend of the data but fails to capture any of the local movements. 
+    The cubic function also only manages to capture the trend but better than the linear function. Both of the them, unsurprisingly, fail to capture the sinusoidal component of the data.
+  </p>
+  <p>
+    We can also try adding higher order polynomial basis functions, but we need to be careful with overfitting. 
+    Try a couple cases on your own and see how it affects the mean squared error. Also print the mean squared error on the training set. 
+    If there is a large gap between the training and test error, that is a sign of overfitting.
+  </p>
+  <p>For example:</p>
+  <div class="chart-wrap">
+    <canvas id="sextic-vs-decic"></canvas>
+  </div>
+  <p>
+    Here we see that the decic seems to fit the dataset really well, but it is likely that it is overfitting the data in this region. 
+    If we plot the predictions on a set that is outside the range of the training data, we can see that it fails to generalise at all.
+    It reaches very high values that are not at all close to the true values, which is a clear sign of overfitting.
+    You can hover over the chart to see the exact values.
+  </p>
+  <div class="chart-wrap">
+    <canvas id="decic-on-out-of-range"></canvas>
+  </div>
+  <p>
+    Now, of course we can also add other types of basis functions, and even combine different types, but I will leave that for the reader to try out.
+  </p>
   </article>
 
 </div>
